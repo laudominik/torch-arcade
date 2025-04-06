@@ -103,7 +103,7 @@ def cached_mask(coco, cache_dir,
         for ann in annotations:
             category = categories[ann["category_id"]]
             mask = reduce(mask, coco.annToMask(ann), category)
-        # np.savez_compressed(mask_file, mask=mask)
+        np.savez_compressed(mask_file, mask=mask)
     return mask
 
 
@@ -181,21 +181,34 @@ def onehot_to_rgb(onehot, color_dict):
     single_layer = np.argmax(onehot, axis=-1)
     width, height, _ = onehot.shape
     output = np.zeros( (width, height, 3) )
-    # print(single_layer)
-    # # print(output[single_layer==1].shape)
     for k in range(len(color_dict)):
         output[single_layer==k] = np.array(color_dict[k])
     return np.uint8(output)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    ds = ARCADESemanticSegmentation(
+
+    dataset = ARCADESemanticSegmentation(
         "dataset/",
         image_set="train",
         download="true"
     )
-    for img, mask in ds:  
+
+    plt.figure(figsize=(15, 10))
+    n_samples = 8
+    for i, (img, mask) in enumerate(dataset):
+        if i >= n_samples:
+            break
+        
+        rgb_mask = onehot_to_rgb(mask, COLOR_DICT)
+        
+        plt.subplot(4, 4, 2*i + 1)
         plt.imshow(img)
-        plt.show()
-        plt.imshow(onehot_to_rgb(mask, COLOR_DICT))
-        plt.show()
+        plt.title(f"Input {i+1}")
+        plt.axis('off')
+        
+        plt.subplot(4, 4, 2*i + 2)
+        plt.imshow(rgb_mask)
+        plt.title(f"GT {i+1}")
+        plt.axis('off')
+    plt.show()
