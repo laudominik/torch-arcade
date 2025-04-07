@@ -134,6 +134,8 @@ class ARCADEBinarySegmentation(_ARCADEBase):
         img = Image.open(img_filename)
         id = self.file_to_id[img_filename]
         mask =  cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADEBinarySegmentation.reduction)
+        if self.transforms is not None:
+            img, mask = self.transforms(img, mask)
         return img, mask
 
 
@@ -170,6 +172,8 @@ class ARCADESemanticSegmentation(_ARCADEBase):
         img = Image.open(img_filename)
         id = self.file_to_id[img_filename]
         mask =  cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADESemanticSegmentation.reduction)
+        if self.transforms is not None:
+            img, mask = self.transforms(img, mask)
         return img, mask
 
 
