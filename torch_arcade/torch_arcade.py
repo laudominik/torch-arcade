@@ -181,6 +181,48 @@ class ARCADEStenosisDetection():
     pass
 
 
+class ARCADEArterySideClassification(_ARCADEBase):
+    TASK = "segmentation"
+    MASK_CACHE = "masks"
+    ID2LABEL = {
+        0: "right",
+        1: "left",
+    }
+
+    def __init__(
+        self,
+        root: Union[str, Path],
+        image_set: str = "train",
+        download: bool = False,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        transforms: Optional[Callable] = None,
+    ):label = 0 if any([seg in segments for seg in ["1", "2", "3"]]) else 1 = os.path.join(self.dataset_dir, ARCADEArterySideClassification.MASK_CACHE)
+        os.makedirs(self.mask_dir, exist_ok=True)
+
+    @staticmethod
+    def reduction(mask, other, _):
+        if mask is None:
+            return other
+        return mask | other
+
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        img_filename = self.images[index]
+        id = self.file_to_id[img_filename]
+        mask = cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADEArterySideClassification.reduction)
+
+        annotations = self.coco.loadAnns(self.coco.getAnnIds(imgIds=id))
+        segments = {self.coco.cats[ann["category_id"]]["name"] for ann in annotations}
+
+        # If any of 1, 2, 3 segments is present, label as "right" (0) else "left" (1)
+        label = 0 if any([seg in segments for seg in ["1", "2", "3"]]) else 1
+
+        if self.transforms is not None:
+            mask = self.transforms(mask)
+            
+        return mask, label
+
+
 def onehot_to_rgb(onehot, color_dict):
     single_layer = np.argmax(onehot, axis=-1)
     width, height, _ = onehot.shape
@@ -188,6 +230,30 @@ def onehot_to_rgb(onehot, color_dict):
     for k in range(len(color_dict)):
         output[single_layer==k] = np.array(color_dict[k])
     return np.uint8(output)
+
+
+def visualize_artery_side_classification():
+    import matplotlib.pyplot as plt
+
+    dataset = ARCADEArterySideClassification(
+        "dataset/",
+        image_set="train",
+        download="true"
+    )
+
+    plt.figure(figsize=(15, 10))
+    n_samples = 16
+    for i, (mask, label) in enumerate(dataset):
+        if i >= n_samples:
+            break
+        
+        plt.subplot(4, 4, i + 1)
+        plt.imshow(mask)
+        plt.title(f"GT {i+1} Label: {dataset.ID2LABEL[label]}")
+        plt.axis('off')
+        
+    plt.savefig("arcade_artery_side_classification.png")
+
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
