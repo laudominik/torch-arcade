@@ -13,7 +13,7 @@ from pycocotools import mask as coco_mask
 from torchvision.datasets.utils import download_and_extract_archive
 from torchvision.datasets import VisionDataset
 
-from encoding import ENCODING, COLOR_DICT
+from .encoding import ENCODING, COLOR_DICT
 
 class _ARCADEBase(VisionDataset):
     URL="https://zenodo.org/records/8386059/files/arcade_challenge_datasets.zip"
