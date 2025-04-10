@@ -1,4 +1,3 @@
-
 import os
 import os.path
 from pathlib import Path
@@ -211,16 +210,16 @@ class ARCADEArteryClassification(_ARCADEBase):
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         img_filename = self.images[index]
         id = self.file_to_id[img_filename]
-        mask = cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADEArteryClassification.reduction)
+        mask = Image.fromarray(cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADEArteryClassification.reduction))
 
         annotations = self.coco.loadAnns(self.coco.getAnnIds(imgIds=id))
         segments = {self.coco.cats[ann["category_id"]]["name"] for ann in annotations}
 
-        # If any of 1, 2, 3 segments is present, label as "right" (0) else "left" (1)
-        label = 0 if any([seg in segments for seg in ["1", "2", "3", "4", "16a", "16b", "16c"]]) else 1
+        # If any of 1, 2, 3, 4, 16a, 16b, 16c segments is present, label as "right" (0) else "left" (1)
+        label = 0 if any(seg in segments for seg in ["1", "2", "3", "4", "16a", "16b", "16c"]) else 1
 
         if self.transforms is not None:
-            mask = self.transforms(mask)
+            mask, label = self.transforms(mask, label)
             
         return mask, label
 
