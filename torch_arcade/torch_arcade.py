@@ -13,7 +13,7 @@ from pycocotools import mask as coco_mask
 from torchvision.datasets.utils import download_and_extract_archive
 from torchvision.datasets import VisionDataset
 
-from .encoding import ENCODING, COLOR_DICT
+from encoding import ENCODING, COLOR_DICT
 
 class _ARCADEBase(VisionDataset):
     URL="https://zenodo.org/records/8386059/files/arcade_challenge_datasets.zip"
@@ -181,7 +181,7 @@ class ARCADEStenosisDetection():
     pass
 
 
-class ARCADEArterySideClassification(_ARCADEBase):
+class ARCADEArteryClassification(_ARCADEBase):
     TASK = "segmentation"
     MASK_CACHE = "masks"
     ID2LABEL = {
@@ -197,7 +197,9 @@ class ARCADEArterySideClassification(_ARCADEBase):
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         transforms: Optional[Callable] = None,
-    ):label = 0 if any([seg in segments for seg in ["1", "2", "3"]]) else 1 = os.path.join(self.dataset_dir, ARCADEArterySideClassification.MASK_CACHE)
+    ):
+        super().__init__(root, image_set, ARCADEArteryClassification.TASK, download, transform, target_transform, transforms)
+        self.mask_dir = os.path.join(self.dataset_dir, ARCADEArteryClassification.MASK_CACHE)
         os.makedirs(self.mask_dir, exist_ok=True)
 
     @staticmethod
@@ -209,13 +211,13 @@ class ARCADEArterySideClassification(_ARCADEBase):
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         img_filename = self.images[index]
         id = self.file_to_id[img_filename]
-        mask = cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADEArterySideClassification.reduction)
+        mask = cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADEArteryClassification.reduction)
 
         annotations = self.coco.loadAnns(self.coco.getAnnIds(imgIds=id))
         segments = {self.coco.cats[ann["category_id"]]["name"] for ann in annotations}
 
         # If any of 1, 2, 3 segments is present, label as "right" (0) else "left" (1)
-        label = 0 if any([seg in segments for seg in ["1", "2", "3"]]) else 1
+        label = 0 if any([seg in segments for seg in ["1", "2", "3", "4", "16a", "16b", "16c"]]) else 1
 
         if self.transforms is not None:
             mask = self.transforms(mask)
@@ -232,11 +234,11 @@ def onehot_to_rgb(onehot, color_dict):
     return np.uint8(output)
 
 
-def visualize_artery_side_classification():
+def visualize_artery_classification():
     import matplotlib.pyplot as plt
 
-    dataset = ARCADEArterySideClassification(
-        "dataset/",
+    dataset = ARCADEArteryClassification(
+        "datasets/",
         image_set="train",
         download="true"
     )
@@ -259,7 +261,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     dataset = ARCADESemanticSegmentation(
-        "dataset/",
+        "datasets/",
         image_set="train",
         download="true"
     )
