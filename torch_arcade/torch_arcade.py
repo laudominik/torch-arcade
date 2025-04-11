@@ -14,6 +14,10 @@ from torchvision.datasets import VisionDataset
 
 from .encoding import ENCODING, COLOR_DICT
 
+def distinguish_side(segments):
+        return "right" if any(seg in segments for seg in ["1", "2", "3", "4", "16a", "16b", "16c"]) else "left"
+
+
 class _ARCADEBase(VisionDataset):
     URL="https://zenodo.org/records/8386059/files/arcade_challenge_datasets.zip"
     ZIPNAME="arcade_challenge_datasets.zip"
@@ -54,6 +58,7 @@ class _ARCADEBase(VisionDataset):
         root: Union[str, Path],
         image_set: str = "train",
         task: str = "segmentation",
+        side: str = None,
         download: bool = False,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
@@ -68,11 +73,19 @@ class _ARCADEBase(VisionDataset):
         self.dataset_dir = os.path.join(self.root,  _ARCADEBase.FILENAME, task_dict["path"])
         self.coco = COCO(os.path.join(self.dataset_dir, "annotations", task_dict["coco"]))
         image_dir = os.path.join(self.dataset_dir, "images")
-        self.images = [
-            os.path.join(image_dir, file_name) 
-            for file_name in os.listdir(image_dir) 
-            if file_name.endswith('.png')
-        ]
+
+        self.images = []
+
+        for image in self.coco.dataset['images']:
+            img_id = image['id']
+            annotations = self.coco.loadAnns(self.coco.getAnnIds(imgIds=img_id))
+            segments = {self.coco.cats[ann["category_id"]]["name"] for ann in annotations}
+            this_side = distinguish_side(segments)
+            if side is None or this_side == side:
+                file_path = os.path.join(image_dir, image['file_name'])
+                if os.path.exists(file_path) and file_path.endswith('.png'):
+                    self.images.append(file_path)
+
         self.file_to_id = {
             os.path.join(image_dir, image['file_name']) : image['id'] 
             for image in self.coco.dataset['images']
@@ -119,7 +132,7 @@ class ARCADEBinarySegmentation(_ARCADEBase):
         target_transform: Optional[Callable] = None,
         transforms: Optional[Callable] = None,
     ):
-        super().__init__(root, image_set, ARCADEBinarySegmentation.TASK, download, transform, target_transform, transforms)
+        super().__init__(root, image_set, ARCADEBinarySegmentation.TASK, None, download, transform, target_transform, transforms)
         self.mask_dir = os.path.join(self.dataset_dir, ARCADEBinarySegmentation.MASK_CACHE)        
         os.makedirs(self.mask_dir, exist_ok=True)
 
@@ -147,12 +160,13 @@ class ARCADESemanticSegmentation(_ARCADEBase):
         self,
         root: Union[str, Path],
         image_set: str = "train",
+        side: str = None,
         download: bool = False,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         transforms: Optional[Callable] = None,
     ):
-        super().__init__(root, image_set, ARCADESemanticSegmentation.TASK, download, transform, target_transform, transforms)
+        super().__init__(root, image_set, ARCADESemanticSegmentation.TASK, side, download, transform, target_transform, transforms)
         self.mask_dir = os.path.join(self.dataset_dir, ARCADESemanticSegmentation.MASK_CACHE)                
         os.makedirs(self.mask_dir, exist_ok=True)
 
@@ -176,6 +190,9 @@ class ARCADESemanticSegmentation(_ARCADEBase):
         return img, mask
 
 
+class ARCADESemanticSegmentationRight(ARCADESemanticSegmentation):
+    pass
+
 class ARCADEStenosisDetection():
     pass
 
@@ -197,7 +214,7 @@ class ARCADEArteryClassification(_ARCADEBase):
         target_transform: Optional[Callable] = None,
         transforms: Optional[Callable] = None,
     ):
-        super().__init__(root, image_set, ARCADEArteryClassification.TASK, download, transform, target_transform, transforms)
+        super().__init__(root, image_set, ARCADEArteryClassification.TASK, None, download, transform, target_transform, transforms)
         self.mask_dir = os.path.join(self.dataset_dir, ARCADEArteryClassification.MASK_CACHE)
         os.makedirs(self.mask_dir, exist_ok=True)
 
@@ -215,8 +232,7 @@ class ARCADEArteryClassification(_ARCADEBase):
         annotations = self.coco.loadAnns(self.coco.getAnnIds(imgIds=id))
         segments = {self.coco.cats[ann["category_id"]]["name"] for ann in annotations}
 
-        # If any of 1, 2, 3, 4, 16a, 16b, 16c segments is present, label as "right" (0) else "left" (1)
-        label = 0 if any(seg in segments for seg in ["1", "2", "3", "4", "16a", "16b", "16c"]) else 1
+        label = 0 if distinguish_side(segments) == "right" else "left"
 
         if self.transforms is not None:
             mask, label = self.transforms(mask, label)

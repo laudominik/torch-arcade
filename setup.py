@@ -13,5 +13,5 @@ setup(
     packages = ['torch_arcade'],
     package_dir={'' : '.'},
     long_description=read('README.md'),
-    install_requires=['torch', 'torchvision'],
+    install_requires=['torch', 'torchvision', 'pycocotools'],
 )
