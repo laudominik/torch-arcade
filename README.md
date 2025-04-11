@@ -23,3 +23,17 @@ ds = ARCADEBinarySegmentation(
 )
 img, mask = ds[0]
 ```
+
+## Dataset list
+- `ARCADEBinarySegmentation`
+    - input: image 
+    - label: image binary mask (shape `512x512x1`)
+- `ARCADESemanticSegmentation`
+    - input: image
+    - label: image semantic mask (shape `512x512x26`)
+- `ARCADEArteryClassification`
+    - input: image binary mask
+    - label: 0 - right artery, 1 - left artery
+- `ARCADESemanticSegmentationBinary`
+    - input: image binary mask
+    - label: image semantic mask (shape `512x512x26`)
