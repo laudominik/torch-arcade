@@ -197,17 +197,43 @@ class ARCADEStenosisDetection():
     pass
 
 
-class ARCADESemanticSegmentationBinary(ARCADESemanticSegmentation):
+class ARCADESemanticSegmentationBinary(_ARCADEBase):
+    TASK = "segmentation"
+    MASK_CACHE = "masks_semantic"
+    CAT_TO_ONEHOT = {}
+
     def __init__(
         self,
-        root,
-        **kwargs
+        root: Union[str, Path],
+        image_set: str = "train",
+        side: str = None,
+        download: bool = False,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        transforms: Optional[Callable] = None,
     ):
-        super().__init__(root, **kwargs)
+        super().__init__(root, image_set, ARCADESemanticSegmentationBinary.TASK, side, download, transform, target_transform, transforms)
+        self.mask_dir = os.path.join(self.dataset_dir, ARCADESemanticSegmentationBinary.MASK_CACHE)                
+        os.makedirs(self.mask_dir, exist_ok=True)
+
+    @staticmethod
+    def reduction(mask, other, other_cat):
+        one_hot_vector = np.array(ENCODING[other_cat['name']])
+        width, height = other.shape
+        other_oh = np.zeros((width, height, len(one_hot_vector)))
+        other_oh[(other == 1)] = one_hot_vector
+
+        if mask is None: return other_oh
+        return np.maximum(mask, other_oh)
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
-        _, mask = super().__getitem__(index)
+        img_filename = self.images[index]
+        img = Image.open(img_filename)
+        id = self.file_to_id[img_filename]
+        mask =  cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADESemanticSegmentationBinary.reduction)
         binary = (mask.sum(axis=-1, keepdims=True) > 0)
+        if self.transforms is not None:
+            binary, mask = self.transforms(binary, mask)
         return binary, mask
 
 
