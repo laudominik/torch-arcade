@@ -197,6 +197,20 @@ class ARCADEStenosisDetection():
     pass
 
 
+class ARCADESemanticSegmentationBinary(ARCADESemanticSegmentation):
+    def __init__(
+        self,
+        root,
+        **kwargs
+    ):
+        super().__init__(root, **kwargs)
+
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        _, mask = super().__getitem__(index)
+        binary = (mask.sum(axis=-1, keepdims=True) > 0)
+        return binary, mask
+
+
 class ARCADEArteryClassification(_ARCADEBase):
     TASK = "segmentation"
     MASK_CACHE = "masks"
