@@ -59,6 +59,7 @@ class _ARCADEBase(VisionDataset):
         image_set: str = "train",
         task: str = "segmentation",
         side: str = None,
+        encode_background: bool = True,
         download: bool = False,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
@@ -68,6 +69,8 @@ class _ARCADEBase(VisionDataset):
 
         if download:
             download_and_extract_archive(_ARCADEBase.URL, self.root, filename=_ARCADEBase.ZIPNAME)
+            
+        self.encode_background = encode_background
 
         task_dict = _ARCADEBase.DATASET_DICT[task][image_set]
         self.dataset_dir = os.path.join(self.root,  _ARCADEBase.FILENAME, task_dict["path"])
@@ -93,6 +96,17 @@ class _ARCADEBase(VisionDataset):
 
     def __len__(self) -> int:
         return len(self.images)
+    
+    def _get_encoded_base(self, width, height, depth):
+        if self.encode_background:
+            default_value = np.array(ENCODING['background'])
+        else:
+            default_value = np.zeros((depth,))
+            
+        encoded_base = np.zeros((height, width, depth))
+        encoded_base[:] = default_value
+
+        return encoded_base
 
 
 def cached_mask(coco, cache_dir, 
@@ -132,7 +146,7 @@ class ARCADEBinarySegmentation(_ARCADEBase):
         target_transform: Optional[Callable] = None,
         transforms: Optional[Callable] = None,
     ):
-        super().__init__(root, image_set, ARCADEBinarySegmentation.TASK, None, download, transform, target_transform, transforms)
+        super().__init__(root, image_set, ARCADEBinarySegmentation.TASK, None, False, download, transform, target_transform, transforms)
         self.mask_dir = os.path.join(self.dataset_dir, ARCADEBinarySegmentation.MASK_CACHE)        
         os.makedirs(self.mask_dir, exist_ok=True)
 
@@ -162,11 +176,12 @@ class ARCADESemanticSegmentation(_ARCADEBase):
         image_set: str = "train",
         side: str = None,
         download: bool = False,
+        encode_background: bool = True,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         transforms: Optional[Callable] = None,
     ):
-        super().__init__(root, image_set, ARCADESemanticSegmentation.TASK, side, download, transform, target_transform, transforms)
+        super().__init__(root, image_set, ARCADESemanticSegmentation.TASK, side, encode_background, download, transform, target_transform, transforms)
         self.mask_dir = os.path.join(self.dataset_dir, ARCADESemanticSegmentation.MASK_CACHE)                
         os.makedirs(self.mask_dir, exist_ok=True)
 
@@ -174,7 +189,7 @@ class ARCADESemanticSegmentation(_ARCADEBase):
     def reduction(mask, other, other_cat):
         one_hot_vector = np.array(ENCODING[other_cat['name']])
         width, height = other.shape
-        other_oh = np.zeros((width, height, len(one_hot_vector)))
+        other_oh = self._get_encoded_base(width, height, len(one_hot_vector))
         other_oh[(other == 1)] = one_hot_vector
 
         if mask is None: return other_oh
@@ -207,12 +222,13 @@ class ARCADESemanticSegmentationBinary(_ARCADEBase):
         root: Union[str, Path],
         image_set: str = "train",
         side: str = None,
+        encode_background: bool = True,
         download: bool = False,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         transforms: Optional[Callable] = None,
     ):
-        super().__init__(root, image_set, ARCADESemanticSegmentationBinary.TASK, side, download, transform, target_transform, transforms)
+        super().__init__(root, image_set, ARCADESemanticSegmentationBinary.TASK, side, encode_background, download, transform, target_transform, transforms)
         self.mask_dir = os.path.join(self.dataset_dir, ARCADESemanticSegmentationBinary.MASK_CACHE)                
         os.makedirs(self.mask_dir, exist_ok=True)
 
@@ -220,7 +236,7 @@ class ARCADESemanticSegmentationBinary(_ARCADEBase):
     def reduction(mask, other, other_cat):
         one_hot_vector = np.array(ENCODING[other_cat['name']])
         width, height = other.shape
-        other_oh = np.zeros((width, height, len(one_hot_vector)))
+        other_oh = self._get_encoded_base(width, height, len(one_hot_vector))
         other_oh[(other == 1)] = one_hot_vector
 
         if mask is None: return other_oh
@@ -254,7 +270,7 @@ class ARCADEArteryClassification(_ARCADEBase):
         target_transform: Optional[Callable] = None,
         transforms: Optional[Callable] = None,
     ):
-        super().__init__(root, image_set, ARCADEArteryClassification.TASK, None, download, transform, target_transform, transforms)
+        super().__init__(root, image_set, ARCADEArteryClassification.TASK, None, False, download, transform, target_transform, transforms)
         self.mask_dir = os.path.join(self.dataset_dir, ARCADEArteryClassification.MASK_CACHE)
         os.makedirs(self.mask_dir, exist_ok=True)
 
