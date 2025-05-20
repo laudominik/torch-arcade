@@ -189,12 +189,30 @@ class ARCADESemanticSegmentation(_ARCADEBase):
             img, mask = self.transforms(img, mask)
         return img, mask
 
+class ARCADEStenosisDetection(_ARCADEBase):
+    TASK = "stenosis"
 
-class ARCADESemanticSegmentationRight(ARCADESemanticSegmentation):
-    pass
+    def __init__(
+        self,
+        root: Union[str, Path],
+        image_set: str = "train",
+        side: str = None,
+        download: bool = False,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        transforms: Optional[Callable] = None,
+    ):
+        super().__init__(root, image_set, ARCADEStenosisDetection.TASK, side, download, transform, target_transform, transforms)
 
-class ARCADEStenosisDetection():
-    pass
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        img_filename = self.images[index]
+        img_id = self.file_to_id[img_filename]
+        annotations = self.coco.loadAnns(self.coco.getAnnIds(imgIds=img_id))
+        img = Image.open(img_filename)
+        bbox = annotations[0]['bbox']
+        if self.transforms is not None:
+            img, bbox = self.transforms(img, bbox)
+        return img, bbox
 
 
 class ARCADESemanticSegmentationBinary(_ARCADEBase):
