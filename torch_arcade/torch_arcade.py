@@ -210,18 +210,11 @@ class ARCADEStenosisDetection(_ARCADEBase):
         img_id = self.file_to_id[img_filename]
         annotations = self.coco.loadAnns(self.coco.getAnnIds(imgIds=img_id))
         img = Image.open(img_filename)
-        boxes = [annotation['bbox'] for annotation in annotations]
         
         if self.transforms is not None:
-            img, boxes = self.transforms(img, boxes)
-            
-        return {
-            'image': img,
-            'annotations': {
-                'boxes': boxes,
-                'labels': torch.zeros(len(boxes), dtype=torch.int64) 
-            } 
-        }
+            img, annotations = self.transforms(img, annotations)
+
+        return img, annotations
 
 
 class ARCADESemanticSegmentationBinary(_ARCADEBase):
