@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Tuple, Union
 
 import numpy as np
+import torch
 
 from PIL import Image
 from pycocotools.coco import COCO
@@ -209,10 +210,18 @@ class ARCADEStenosisDetection(_ARCADEBase):
         img_id = self.file_to_id[img_filename]
         annotations = self.coco.loadAnns(self.coco.getAnnIds(imgIds=img_id))
         img = Image.open(img_filename)
-        bbox = annotations[0]['bbox']
+        boxes = [annotation['bbox'] for annotation in annotations]
+        
         if self.transforms is not None:
-            img, bbox = self.transforms(img, bbox)
-        return img, bbox
+            img, boxes = self.transforms(img, boxes)
+            
+        return {
+            'image': img,
+            'annotations': {
+                'boxes': boxes,
+                'labels': torch.zeros(len(boxes), dtype=torch.int64) 
+            } 
+        }
 
 
 class ARCADESemanticSegmentationBinary(_ARCADEBase):
