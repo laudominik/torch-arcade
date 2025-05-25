@@ -37,3 +37,9 @@ img, mask = ds[0]
 - `ARCADESemanticSegmentationBinary`
     - input: image binary mask
     - label: image semantic mask (shape `512x512x26`)
+- `ARCADEStenosisDetection`
+    - input: image
+    - label: coco labels for the stenoses
+- `ARCADEStenosisSegmentation`
+    - input: image
+    - label: binary mask (0, 1)

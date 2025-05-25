@@ -166,9 +166,11 @@ class ARCADESemanticSegmentation(_ARCADEBase):
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         transforms: Optional[Callable] = None,
+        task: str = TASK,
+        cache: str = MASK_CACHE
     ):
-        super().__init__(root, image_set, ARCADESemanticSegmentation.TASK, side, download, transform, target_transform, transforms)
-        self.mask_dir = os.path.join(self.dataset_dir, ARCADESemanticSegmentation.MASK_CACHE)                
+        super().__init__(root, image_set, task, side, download, transform, target_transform, transforms)
+        self.mask_dir = os.path.join(self.dataset_dir, cache)                
         os.makedirs(self.mask_dir, exist_ok=True)
 
     @staticmethod
@@ -189,6 +191,29 @@ class ARCADESemanticSegmentation(_ARCADEBase):
         if self.transforms is not None:
             img, mask = self.transforms(img, mask)
         return img, mask
+
+
+class ARCADEStenosisSegmentation(ARCADESemanticSegmentation):
+    TASK = "stenosis"
+    MASK_CACHE = "masks_stenosis"
+    STENOSIS_IN_MASK_INDEX = 25
+    
+    def __init__(
+        self,
+        root: Union[str, Path],
+        image_set: str = "train",
+        side: str = None,
+        download: bool = False,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        transforms: Optional[Callable] = None,
+    ):
+        super().__init__(root, image_set, side, download, transform, target_transform, transforms, ARCADEStenosisSegmentation.TASK, ARCADEStenosisSegmentation.MASK_CACHE)
+
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        img, mask = super().__getitem__(index)
+        return img, mask[:,:,ARCADEStenosisSegmentation.STENOSIS_IN_MASK_INDEX]
+
 
 class ARCADEStenosisDetection(_ARCADEBase):
     TASK = "stenosis"
