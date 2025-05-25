@@ -98,7 +98,7 @@ class _ARCADEBase(VisionDataset):
 
 def cached_mask(coco, cache_dir, 
                 img_filename, img_id, 
-                reduce):
+                reduce, bg=True):
     img = Image.open(img_filename)
     mask_file = os.path.join(
         cache_dir,
@@ -110,12 +110,14 @@ def cached_mask(coco, cache_dir,
         mask = np.load(mask_file)["mask"]
     else:
         annotations = coco.loadAnns(coco.getAnnIds(imgIds=img_id))
-        width, height = img.size
-        mask = np.zeros((height, width), dtype=np.uint8)
         mask = None
         for ann in annotations:
-            category = categories[ann["category_id"]]
-            mask = reduce(mask, coco.annToMask(ann), category)
+            category = categories[ann["category_id"]-1]
+            mask = reduce(mask, coco.annToMask(ann), category)    
+        if bg:
+            bg_channel = (np.sum(mask, axis=-1) == 0).astype(np.uint8)
+            bg_channel = bg_channel[..., np.newaxis]
+            mask = np.concatenate([bg_channel, mask], axis=-1)
         np.savez_compressed(mask_file, mask=mask)
     return mask
 
@@ -146,7 +148,7 @@ class ARCADEBinarySegmentation(_ARCADEBase):
         img_filename = self.images[index]
         img = Image.open(img_filename)
         id = self.file_to_id[img_filename]
-        mask =  cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADEBinarySegmentation.reduction)
+        mask =  cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADEBinarySegmentation.reduction, False)
         if self.transforms is not None:
             img, mask = self.transforms(img, mask)
         return img, mask
@@ -276,7 +278,7 @@ class ARCADESemanticSegmentationBinary(_ARCADEBase):
         img = Image.open(img_filename)
         id = self.file_to_id[img_filename]
         mask =  cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADESemanticSegmentationBinary.reduction)
-        binary = (mask.sum(axis=-1, keepdims=True) > 0)
+        binary = (mask[:,:, 1:].sum(axis=-1, keepdims=True) > 0)
         if self.transforms is not None:
             binary, mask = self.transforms(binary, mask)
         return binary, mask
