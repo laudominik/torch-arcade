@@ -214,7 +214,8 @@ class ARCADEStenosisSegmentation(ARCADESemanticSegmentation):
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         img, mask = super().__getitem__(index)
-        return img, mask[:,:,ARCADEStenosisSegmentation.STENOSIS_IN_MASK_INDEX]
+        selected_segments = [0, ARCADEStenosisSegmentation.STENOSIS_IN_MASK_INDEX]
+        return img, mask[selected_segments, :, :]
 
 
 class ARCADEStenosisDetection(_ARCADEBase):
