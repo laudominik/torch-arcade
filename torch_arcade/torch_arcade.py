@@ -325,6 +325,100 @@ class ARCADEArteryClassification(_ARCADEBase):
             mask, label = self.transforms(mask, label)
             
         return mask, label
+    
+class ARCADEInstanceDetection(_ARCADEBase):
+    """
+    ARCADE Instance Detection Dataset for Mask R-CNN training
+    """
+    TASK = "segmentation"
+
+    def __init__(
+        self,
+        root: Union[str, Path],
+        image_set: str = "train",
+        side: str = None,
+        download: bool = False,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        transforms: Optional[Callable] = None,
+    ):
+        super().__init__(root, image_set, ARCADEInstanceDetection.TASK, side, download, transform, target_transform, transforms)
+
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        img_filename = self.images[index]
+        img_id = self.file_to_id[img_filename]
+        
+        # Load image
+        img = Image.open(img_filename).convert("RGB")
+        
+        # Get annotations
+        ann_ids = self.coco.getAnnIds(imgIds=img_id)
+        anns = self.coco.loadAnns(ann_ids)
+        
+        # Convert to tensors
+        boxes = []
+        labels = []
+        masks = []
+        area = []
+        iscrowd = []
+        
+        for ann in anns:
+            # Get bounding box
+            x, y, w, h = ann['bbox']
+            boxes.append([x, y, x + w, y + h])
+            
+            # Get category (simplified to binary: background=0, vessel=1)
+            labels.append(1)  # All vessels
+            
+            # Get mask
+            mask = self.coco.annToMask(ann)
+            masks.append(mask)
+            
+            # Get area
+            area.append(ann['area'])
+            
+            # Is crowd (for COCO evaluation)
+            iscrowd.append(ann.get('iscrowd', 0))
+        
+        # Convert to tensors
+        if len(boxes) > 0:
+            boxes = torch.as_tensor(boxes, dtype=torch.float32)
+            labels = torch.as_tensor(labels, dtype=torch.int64)
+            masks = torch.as_tensor(np.array(masks), dtype=torch.uint8)
+            area = torch.as_tensor(area, dtype=torch.float32)
+            iscrowd = torch.as_tensor(iscrowd, dtype=torch.int64)
+        else:
+            # Handle images with no annotations
+            boxes = torch.zeros((0, 4), dtype=torch.float32)
+            labels = torch.zeros(0, dtype=torch.int64)
+            masks = torch.zeros((0, img.size[1], img.size[0]), dtype=torch.uint8)
+            area = torch.zeros(0, dtype=torch.float32)
+            iscrowd = torch.zeros(0, dtype=torch.int64)
+        
+        target = {
+            "boxes": boxes,
+            "labels": labels,
+            "masks": masks,
+            "image_id": torch.tensor([img_id]),
+            "area": area,
+            "iscrowd": iscrowd
+        }
+        
+        # Convert image to tensor
+        from torchvision import transforms
+        transform = transforms.Compose([
+            transforms.ToTensor()
+        ])
+        img = transform(img)
+        
+        if self.transforms is not None:
+            img, target = self.transforms(img, target)
+        
+        return img, target
+
+    def get_num_classes(self):
+        # Background + vessel
+        return 2
 
 
 def onehot_to_rgb(onehot, color_dict):
