@@ -43,3 +43,6 @@ img, mask = ds[0]
 - `ARCADEStenosisSegmentation`
     - input: image
     - label: binary mask (0, 1)
+- `ARCADEInstanceDetection`
+    - input: image
+    - label: `{ "boxes": [], "labels": [], "masks": [], "image_id": int, "area": float, "iscrowd": bool }`
