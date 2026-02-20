@@ -54,8 +54,7 @@ class _ARCADEBase(VisionDataset):
     },
 }
 
-    def __init__(
-        self,
+    def __init__(self,
         root: Union[str, Path],
         image_set: str = "train",
         task: str = "segmentation",
@@ -64,7 +63,7 @@ class _ARCADEBase(VisionDataset):
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         transforms: Optional[Callable] = None,
-    ):
+    ):  
         super().__init__(root, transforms, transform, target_transform)
 
         if download:
@@ -126,15 +125,14 @@ class ARCADEBinarySegmentation(_ARCADEBase):
     TASK = "segmentation"
     MASK_CACHE = "masks"
 
-    def __init__(
-        self,
+    def __init__(self,
         root: Union[str, Path],
         image_set: str = "train",
         download: bool = False,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
         transforms: Optional[Callable] = None,
-    ):
+    ):   
         super().__init__(root, image_set, ARCADEBinarySegmentation.TASK, None, download, transform, target_transform, transforms)
         self.mask_dir = os.path.join(self.dataset_dir, ARCADEBinarySegmentation.MASK_CACHE)        
         os.makedirs(self.mask_dir, exist_ok=True)
@@ -159,8 +157,7 @@ class ARCADESemanticSegmentation(_ARCADEBase):
     MASK_CACHE = "masks_semantic"
     CAT_TO_ONEHOT = {}
 
-    def __init__(
-        self,
+    def __init__(self,
         root: Union[str, Path],
         image_set: str = "train",
         side: str = None,
@@ -189,7 +186,7 @@ class ARCADESemanticSegmentation(_ARCADEBase):
         img_filename = self.images[index]
         img = Image.open(img_filename)
         id = self.file_to_id[img_filename]
-        mask =  cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADESemanticSegmentation.reduction)
+        mask =  cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADESemanticSegmentation.reduction, bg=False)
         if self.transforms is not None:
             img, mask = self.transforms(img, mask)
         return img, mask
@@ -200,8 +197,7 @@ class ARCADEStenosisSegmentation(ARCADESemanticSegmentation):
     MASK_CACHE = "masks_stenosis"
     STENOSIS_IN_MASK_INDEX = 25
     
-    def __init__(
-        self,
+    def __init__(self,
         root: Union[str, Path],
         image_set: str = "train",
         side: str = None,
@@ -220,8 +216,7 @@ class ARCADEStenosisSegmentation(ARCADESemanticSegmentation):
 class ARCADEStenosisDetection(_ARCADEBase):
     TASK = "stenosis"
 
-    def __init__(
-        self,
+    def __init__(self,
         root: Union[str, Path],
         image_set: str = "train",
         side: str = None,
@@ -249,8 +244,7 @@ class ARCADESemanticSegmentationBinary(_ARCADEBase):
     MASK_CACHE = "masks_semantic"
     CAT_TO_ONEHOT = {}
 
-    def __init__(
-        self,
+    def __init__(self,
         root: Union[str, Path],
         image_set: str = "train",
         side: str = None,
@@ -277,7 +271,7 @@ class ARCADESemanticSegmentationBinary(_ARCADEBase):
         img_filename = self.images[index]
         img = Image.open(img_filename)
         id = self.file_to_id[img_filename]
-        mask =  cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADESemanticSegmentationBinary.reduction)
+        mask =  cached_mask(self.coco, self.mask_dir, img_filename, id, ARCADESemanticSegmentationBinary.reduction, bg=False)
         binary = (mask[:,:, 1:].sum(axis=-1, keepdims=True) > 0)
         if self.transforms is not None:
             binary, mask = self.transforms(binary, mask)
@@ -292,8 +286,7 @@ class ARCADEArteryClassification(_ARCADEBase):
         1: "left",
     }
 
-    def __init__(
-        self,
+    def __init__(self,
         root: Union[str, Path],
         image_set: str = "train",
         download: bool = False,
